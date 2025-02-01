@@ -100,10 +100,93 @@ require_command() {
     command -v "$1" >/dev/null 2>&1 || term_error "Required command '$1' not found. Please install it."
 }
 
+# Function to backup original settings
+backup_original_settings() {
+    local backup_dir="/usr/local/share/custom-theme-backup"
+    
+    # Check if backup already exists
+    if [ -f "$backup_dir/.backup_completed" ]; then
+        term_info "Backup already exists, skipping backup process"
+        return 0
+    fi
+    
+    term_info "Backing up original settings..."
+    
+    # Create backup directory if it doesn't exist
+    mkdir -p "$backup_dir"
+    
+    # Backup GRUB settings if GRUB is installed
+    if check_grub; then
+        if [ -f "/etc/default/grub" ]; then
+            cp "/etc/default/grub" "$backup_dir/grub.backup"
+        fi
+    fi
+    
+    # Backup Plymouth theme settings
+    if [ -f "/etc/plymouth/plymouthd.conf" ]; then
+        cp "/etc/plymouth/plymouthd.conf" "$backup_dir/plymouthd.conf.backup"
+    fi
+    
+    # Save the currently active Plymouth theme
+    if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+        plymouth-set-default-theme | tr -d '\n' > "$backup_dir/active_theme.backup"
+    fi
+    
+    # Create a marker file to indicate backup is complete
+    touch "$backup_dir/.backup_completed"
+    
+    term_info "Original settings backed up to $backup_dir"
+}
+
+# Function to restore original settings
+restore_original_settings() {
+    local backup_dir="/usr/local/share/custom-theme-backup"
+    term_info "Restoring original settings..."
+    
+    # Check if backup exists
+    if [ ! -d "$backup_dir" ]; then
+        term_error "No backup found to restore from"
+        return 1
+    fi
+    
+    # Restore GRUB settings if backup exists
+    if [ -f "$backup_dir/grub.backup" ]; then
+        cp "$backup_dir/grub.backup" "/etc/default/grub"
+        update-grub
+        term_info "GRUB settings restored"
+    fi
+    
+    # Restore Plymouth settings if backup exists
+    if [ -f "$backup_dir/plymouthd.conf.backup" ]; then
+        cp "$backup_dir/plymouthd.conf.backup" "/etc/plymouth/plymouthd.conf"
+    fi
+    
+    # Restore original Plymouth theme
+    if [ -f "$backup_dir/active_theme.backup" ]; then
+        local original_theme=$(cat "$backup_dir/active_theme.backup")
+        if [ -n "$original_theme" ]; then
+            plymouth-set-default-theme -R "$original_theme"
+            term_info "Plymouth theme restored to: $original_theme"
+        fi
+    fi
+    
+    # Remove custom theme if it exists
+    if [ -d "/usr/share/plymouth/themes/custom-theme" ]; then
+        rm -rf "/usr/share/plymouth/themes/custom-theme"
+        term_info "Custom theme removed"
+    fi
+    
+    # Update initramfs
+    update-initramfs -u
+    
+    term_done "Original settings restored successfully!"
+}
+
 validate_image() {
     local image_path="$1"
     local is_bullet="${2:-false}"  # Optional parameter to indicate if this is a bullet image
     local max_bullet_size=24       # Maximum size for bullet images
+    local max_image_size=1024
 
     # Check if file exists
     if [[ ! -f "$image_path" ]]; then
@@ -118,14 +201,14 @@ validate_image() {
     fi
 
     require_command "file"
+    require_command "identify"
+    require_command "convert"
     local mime_type
+
     mime_type=$(file --mime-type -b "$image_path")
 
     # If it's a bullet image, check dimensions and resize if needed
-    if [[ "$is_bullet" == "true" ]]; then
-        require_command "identify"
-        require_command "convert"
-        
+    if [[ "$is_bullet" == "true" ]]; then       
         # Get image dimensions
         local dimensions
         dimensions=$(identify -format "%wx%h" "$image_path")
@@ -139,6 +222,22 @@ validate_image() {
             
             # Resize maintaining aspect ratio, setting largest dimension to max_bullet_size
             convert "$image_path" -resize "${max_bullet_size}x${max_bullet_size}>" "$temp_file" || term_error "Bullet image resize failed"
+            image_path="$temp_file"
+        fi
+    else      
+        # Get image dimensions
+        local dimensions
+        dimensions=$(identify -format "%wx%h" "$image_path")
+        local width=${dimensions%x*}
+        local height=${dimensions#*x}
+        
+        # Check if either dimension is larger than max_image_size
+        if (( width > max_image_size )) || (( height > max_image_size )); then
+            term_info "Resizing background image to maximum ${max_image_size}px..."
+            local temp_file="/tmp/resized_$(basename "$image_path")"
+            
+            # Resize maintaining aspect ratio, setting largest dimension to max_image_size
+            convert "$image_path" -resize "${max_image_size}x${max_image_size}>" "$temp_file" || term_error "Bullet image resize failed"
             image_path="$temp_file"
         fi
     fi
@@ -230,7 +329,8 @@ setup_encryption_background() {
     local image_path="$1"
     local position="${2:-top-left}"  # Default to top-left if not specified
     local bullet_path="$3"
-    local set_bullet_spacing="$4"
+    local bullet_filename=$(basename "$bullet_path")
+    local custom_unlock_bullet_spacing="$4"
     term_info "Setting up encryption screen background"
     
     local theme_dir="/usr/share/plymouth/themes/custom-theme"
@@ -240,8 +340,7 @@ setup_encryption_background() {
     cp "$image_path" "$theme_dir/background.png"
     cp "$bullet_path" "$theme_dir/"
 
-    local bullet_filename=$(basename "$bullet_path")
-    
+   
     # Create Plymouth theme configuration
     cat > "$theme_dir/custom-theme.plymouth" << EOF
 [Plymouth Theme]
@@ -257,7 +356,7 @@ EOF
     # Create theme script with position
     cat > "$theme_dir/custom-theme.script" << EOF
 # Set password entry position
-global.entry_position = "${position}";
+global.custom_unlock_entry_position = "${position}";
 
 Window.SetBackgroundTopColor(0, 0, 0);
 Window.SetBackgroundBottomColor(0, 0, 0);
@@ -329,7 +428,7 @@ fun password_dialogue_setup(message_text) {
     
     # Get position coordinates
     local.positions = get_position_coordinates();
-    local.position = global.entry_position;
+    local.position = global.custom_unlock_entry_position;
     
     if (!positions[position]) {
         position = "top-left";  # Fallback to top-left if invalid position
@@ -360,7 +459,7 @@ fun display_password_callback(prompt, bullets) {
     }
     
     local.bullet_width = password_dialogue.bullet_image.GetWidth();
-    local.bullet_spacing = Math.Int(bullet_width * $set_bullet_spacing);
+    local.bullet_spacing = Math.Int(bullet_width * $custom_unlock_bullet_spacing);
     local.bullet_y = password_dialogue.entry.y + 10;
     
     for (i = 0; i < bullets; i++) {
@@ -404,33 +503,39 @@ EOF
 }
 
 main() {
-    local custom_image="custom_background.png"  # Default custom background image
-    local custom_bullet="custom_bullet.png" # Default dot/bullet image for password entry
-    local entry_position="top-left"  # Default position of password entry
-    local set_bullet_spacing="1.2" # Default spacing between bullet images during password entry
+    local custom_grub_background="custom_background.png"  # Default custom background image for GRUB
+    local custom_unlock_background="custom_background.png"  # Default custom background image for unlock disk encryption
+    local custom_unlock_bullet="custom_unlock_bullet.png" # Default dot/bullet image for password entry
+    local custom_unlock_entry_position="top-left"  # Default position of password entry
+    local custom_unlock_bullet_spacing="1.2" # Default spacing between bullet images during password entry
+    local restore_mode=false
     local OPTIND opt
     
     # Print usage/help function
     usage() {
-        echo "Usage: $0 [-i image_path] [-p position]"
+        echo "Usage: $0 [-g grub_image_path] [-u unlock_image_path] [-b unlock_bullet_image_path] [-s unlock_bullet_spacing] [-p position]"
         echo "Options:"
-        echo "  -i : Path to background image (PNG or JPEG)"
+        echo "  -g : Path to grub background image (PNG or JPEG)"
+        echo "  -u : Path to unlock background image (PNG or JPEG)"
         echo "  -b : Path to password dot/bullet image (PNG or JPEG)"
         echo "  -s : Set spacing between password entry bullet images (0.2 - 2.0)"
         echo "  -p : Password entry position (top-left, top-center, top-right, middle-left,"
         echo "       middle-center, middle-right, bottom-left, bottom-center, bottom-right)"
+        echo "  -r : Restore original settings"
         echo "  -h : Show this help message"
         echo
         exit 1
     }
 
     # Parse command line options
-    while getopts "i:p:b:s:h" opt; do
+    while getopts "g:u:p:b:s:rh" opt; do
         case $opt in
-            i) custom_image="$OPTARG";;
-            p) entry_position="$OPTARG";;
-            b) custom_bullet="$OPTARG";;
-            s) set_bullet_spacing="$OPTARG";;
+            g) custom_grub_background="$OPTARG";;
+            u) custom_unlock_background="$OPTARG";;
+            b) custom_unlock_bullet="$OPTARG";;
+            s) custom_unlock_bullet_spacing="$OPTARG";;
+            p) custom_unlock_entry_position="$OPTARG";;
+            r) restore_mode=true;;
             h) usage;;
             ?) usage;;
         esac
@@ -446,26 +551,36 @@ main() {
     echo
 
     check_root
+
+    if [ "$restore_mode" = true ]; then
+        restore_original_settings
+        exit 0
+    fi
+
     install_dependencies
 
+    # Backup original settings before making changes
+    backup_original_settings
+
     # Validate and convert image if required
-    custom_image=$(validate_image "${custom_image}")
-    custom_bullet=$(validate_image "${custom_bullet}" true)
+    custom_grub_background=$(validate_image "${custom_unlock_background}")
+    custom_unlock_background=$(validate_image "${custom_unlock_background}")
+    custom_unlock_bullet=$(validate_image "${custom_unlock_bullet}" true)
 
     # Validate the entry position
     local valid_positions=("top-left" "top-center" "top-right" "middle-left" "middle-center" "middle-right" "bottom-left" "bottom-center" "bottom-right")
-    if ! [[ " ${valid_positions[*]} " =~ " $entry_position " ]]; then
-        term_error "Invalid entry position: $entry_position. Valid positions are: ${valid_positions[*]}"
+    if ! [[ " ${valid_positions[*]} " =~ " $custom_unlock_entry_position " ]]; then
+        term_error "Invalid entry position: $custom_unlock_entry_position. Valid positions are: ${valid_positions[*]}"
     fi
 
     # Configure GRUB background (if applicable and not skipped)
     if $(check_grub); then
-        setup_grub_background "${custom_image}"
+        setup_grub_background "${custom_unlock_background}"
     fi
 
     # Configure encryption screen background (if applicable and not skipped)
     if $(check_encryption); then
-        setup_encryption_background "${custom_image}" "${entry_position}" "${custom_bullet}" "${set_bullet_spacing}"
+        setup_encryption_background "${custom_unlock_background}" "${custom_unlock_entry_position}" "${custom_unlock_bullet}" "${custom_unlock_bullet_spacing}"
     fi
 
     term_done "Customization completed successfully!"

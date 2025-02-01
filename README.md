@@ -35,19 +35,20 @@ cd debcustom
 chmod +x debcustom.sh
 ```
 
-## Usage
+### Usage Options
 
-```bash
-sudo ./debcustom.sh [-i image_path] [-b bullet_path] [-p position] [-s spacing]
+```terminal
+Usage: sudo debcustom.sh [-g grub_image_path] [-u unlock_image_path] [-b unlock_bullet_image_path] [-s unlock_bullet_spacing] [-p position]
+Options:
+  -g : Path to grub background image (PNG or JPEG)
+  -u : Path to unlock background image (PNG or JPEG)
+  -b : Path to password dot/bullet image (PNG or JPEG)
+  -s : Set spacing between password entry bullet images (0.2 - 2.0)
+  -p : Password entry position (top-left, top-center, top-right, middle-left,
+       middle-center, middle-right, bottom-left, bottom-center, bottom-right)
+  -r : Restore original settings
+  -h : Show this help message
 ```
-
-### Options
-
-- `-i` : Path to background image (PNG or JPEG)
-- `-b` : Path to password dot/bullet image (PNG or JPEG)
-- `-p` : Password entry position (see positions below)
-- `-s` : Set spacing between password entry bullet images (0.2 - 2.0)
-- `-h` : Show help message
 
 ### Available Password Entry Positions
 
@@ -67,22 +68,23 @@ sudo ./debcustom.sh [-i image_path] [-b bullet_path] [-p position] [-s spacing]
 # Use all defaults
 sudo ./debcustom.sh
 
-# Custom background image
-sudo ./debcustom.sh -i /path/to/background.png
+# Custom background grub background image
+sudo ./debcustom.sh -g /path/to/background.png
 
-# Custom bullet image and position
-sudo ./debcustom.sh -b /path/to/bullet.png -p bottom-right
+# Custom disk encryption background image, passoword entry bullet image, password entry position
+sudo ./debcustom.sh -u /path/to/background.png -b /path/to/bullet.png -p bottom-right
 
-# All custom options
-sudo ./debcustom.sh -i background.jpg -b bullet.png -p middle-center -s 0.8
+# Restore original settings
+sudo ./debcustom.sh -r
 ```
 
 ## Default Settings
 
-- Background Image: `custom_background.png` in script directory
-- Bullet Image: `custom_bullet.png` in script directory
+- GRUB Background Image: `custom_background.png` in script directory
+- Unlock Background Image: `custom_background.png` in script directory
+- Unlock Bullet Image: `custom_bullet.png` in script directory
 - Password Entry Position: `top-left`
-- Bullet Spacing: `1.2`
+- Unlock Bullet Spacing: `1.2`
 
 ## Included demo images (replace with your preferred images)
 
