@@ -312,7 +312,6 @@ setup_grub_background() {
     local image_path="$1"
     term_info "Setting up GRUB background"
 
-    sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=2/' /etc/default/grub
     sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/' /etc/default/grub
 
     mkdir -p /usr/local/share/images

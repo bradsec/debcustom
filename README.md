@@ -2,6 +2,10 @@
 
 A bash script for customizing Debian-based Linux systems' splash screens, including GRUB bootloader background and disk encryption password entry screen.
 
+## Note
+
+Testing has only been done on Debian 12.
+
 ## Features
 
 - Customize GRUB bootloader background image
@@ -94,7 +98,6 @@ sudo ./debcustom.sh -r
 ## Features in Detail
 
 ### GRUB Customization
-- Sets GRUB timeout to 2 seconds
 - Enables quiet splash mode
 - Sets custom background image
 
