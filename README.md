@@ -117,3 +117,15 @@ sudo ./debcustom.sh -i background.jpg -b bullet.png -p middle-center -s 0.8
 4. Ensure internet connection for package installation
 5. For GRUB customization, verify GRUB bootloader is installed
 6. For encryption screen customization, verify disk encryption is enabled
+
+## Screenshots
+
+### Default Debian 12 GRUB and Encryption Splash Screens 
+
+![image](screenshots/default_grub.png)  
+![image](screenshots/default_password.png)  
+
+### Customized GRUB and Encryption Splash Screens 
+
+![image](screenshots/new_grub.png)
+![image](screenshots/new_password.png)  
