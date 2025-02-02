@@ -93,7 +93,7 @@ sudo ./debcustom.sh -r
 ## Included demo images (replace with your preferred images)
 
 - `custom_background.png`
-- `custom_bullet.png`
+- `custom_unlock_bullet.png`
 
 ## Features in Detail
 
