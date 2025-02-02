@@ -1,6 +1,6 @@
-# Debian Splash Screen Customization
+# Debian Boot-up Background Image Customization
 
-A bash script for customizing Debian-based Linux systems' splash screens, including GRUB bootloader background and disk encryption unlock/password entry screen.
+A bash script for customizing Debian-based Linux systems' boot-up splash screens, including GRUB bootloader background and disk encryption unlock/password entry screen.
 
 ## Note
 
