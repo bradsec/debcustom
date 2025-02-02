@@ -1,6 +1,6 @@
 # Debian Splash Screen Customization
 
-A bash script for customizing Debian-based Linux systems' splash screens, including GRUB bootloader background and disk encryption password entry screen.
+A bash script for customizing Debian-based Linux systems' splash screens, including GRUB bootloader background and disk encryption unlock/password entry screen.
 
 ## Note
 
@@ -125,12 +125,15 @@ sudo ./debcustom.sh -r
 
 ## Screenshots
 
-### Default Debian 12 GRUB and Encryption Splash Screens 
+### Default Debian 12 GRUB and Disk Encryption Unlock Screens 
 
 ![image](screenshots/default_grub.png)  
+![image](screenshots/default_splash_unlock.png)
+
+### Default unlock when no `splash` enabled in `/etc/defaults/grub` 
 ![image](screenshots/default_unlock.png)  
 
-### Customized GRUB and Encryption Splash Screens 
+### Customized GRUB and Disk Encryption Unlock Screens 
 
 ![image](screenshots/new_grub.png)
 ![image](screenshots/new_unlock.png)  
