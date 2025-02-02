@@ -128,9 +128,9 @@ sudo ./debcustom.sh -r
 ### Default Debian 12 GRUB and Encryption Splash Screens 
 
 ![image](screenshots/default_grub.png)  
-![image](screenshots/default_password.png)  
+![image](screenshots/default_unlock.png)  
 
 ### Customized GRUB and Encryption Splash Screens 
 
 ![image](screenshots/new_grub.png)
-![image](screenshots/new_password.png)  
+![image](screenshots/new_unlock.png)  

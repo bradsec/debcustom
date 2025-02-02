@@ -543,10 +543,10 @@ main() {
     clear
     term_colors
     echo
-    echo "-------------------------------------------------------"
-    echo "  Debian splash screen background image customization"
+    echo "--------------------------------------------------------------"
+    echo "  Debian GRUB and Disk Encryption Unlock Image Customization  "
     echo "  Created by bradsec @ github.com"
-    echo "-------------------------------------------------------"
+    echo "--------------------------------------------------------------"
     echo
 
     check_root
